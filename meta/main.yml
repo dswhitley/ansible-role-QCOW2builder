@@ -1,0 +1,16 @@
+---
+dependencies: []
+
+galaxy_info:
+  author: dwhitley
+  description: build a KVM (libvirt) VM from qcow2 image
+  license: license (MIT)
+  min_ansible_version: 2.4
+  platforms:
+  - name: EL
+    versions:
+    - 6
+    - 7
+  galaxy_tags:
+    - kvm
+    - libvirt

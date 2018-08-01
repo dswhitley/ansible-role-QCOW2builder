@@ -1,0 +1,70 @@
+---
+- name: set a fact for referring to image throughout
+  set_fact:
+    IMAGE: "{{ qcow2.location }}/{{ vm.name }}.qcow2"
+
+- name: create a copy of the qcow2 image
+  copy:
+    src: "{{ qcow2.location }}/{{ qcow2.name }}"
+    dest: "{{ IMAGE }}"
+    remote_src: yes
+
+- name: install requisite packages on Ansible host
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - libvirt
+    - virt-manager
+    - libguestfs
+    - libguestfs-tools
+
+- name: remove cloud-init w/ virt-customize
+  command: >
+    virt-customize
+    --add {{ IMAGE }}
+    --uninstall cloud-init
+
+# - name: set root password for troubleshooting (prompt in playbook)
+#   command: >
+#     virt-customize
+#     --add {{ IMAGE }}
+#     --root-password password:{{ root_password }}
+#     --run-command 'sed -i.ORIG "/^#\?PasswordAuthentication no/cPasswordAuthentication yes" /etc/ssh/sshd_config'
+#     --selinux-relabel
+
+- name: inject ssh key w/ virt-customize
+  command: >
+    virt-customize
+    --add {{ IMAGE }}
+    --ssh-inject root:string:"{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    --run-command 'chcon -R unconfined_u:object_r:ssh_home_t:s0 /root/.ssh/'
+#    --selinux-relabel
+
+- name: use virt-install to import image
+  become: yes
+  command: >
+    virt-install 
+    --name {{ vm.name }}
+    --memory {{ vm.memory }}
+    --os-type {{ vm.os_type }}
+    --os-variant {{ vm.os_variant }}
+    --disk {{ IMAGE }},device=disk,bus=virtio
+    --network network={{ vm.network.name }},model=virtio
+    --vnc
+    --noautoconsole
+    --import
+
+- name: wait for {{ vm.name }} to get an IP
+  become: yes
+  shell: >
+    virsh domifaddr {{ vm.name }} | awk '/ipv4/ {split($NF,a,"/"); print a[1]}'
+  register: IPinfo
+  until: IPinfo.stdout != ""
+  retries: 10
+  delay: 5
+
+- name: output IPinfo
+  debug:
+    msg: "now you can perform the following: ssh root@{{ IPinfo.stdout }}"
