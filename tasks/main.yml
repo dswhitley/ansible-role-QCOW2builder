@@ -65,6 +65,14 @@
   retries: 10
   delay: 5
 
+- name: add this VM to a "allVMs" group for future plays
+  add_host:
+    name: "{{ vm.name }}"
+    ansible_host: "{{ IPinfo.stdout }}"
+    ansible_user: root
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no"
+    groups: allVMs
+
 - name: output IPinfo
   debug:
     msg: "now you can perform the following: ssh root@{{ IPinfo.stdout }}"

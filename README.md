@@ -29,7 +29,8 @@ At a high level, this role does the following:
    and by using the supplied qcow2 image as the boot disk
 
 The result is a freshly built and running VM.  The longterm vision is that
-this role will be used in other roles...
+this role will be used in other roles...and to this end, the role will add
+the new VM to an inventory group named `allVMs`.
 
 Important Notes
 ---------------
@@ -47,8 +48,9 @@ Important Notes
       sudo virsh destroy <vm.name>;
       sudo virsh undefine <vm.name> --remove-all-storage
 
-* My example playbook prompts the user for passwords to use in the VM...sort of
-  breaking unattended automation, but that's how I do it right now.
+* The role will add the newly created VM into a group named `allVMs` which
+  is cool because subsequent plays can then use `hosts: allVMs` and it will
+  act on the VM created in this role.  Bingo bango.
 
 Requirements
 ------------
@@ -89,7 +91,8 @@ there is currently no sanity checking:
 Example Playbook
 ----------------
 
-Playbook with configuration options specified:
+Playbook with configuration options specified and utilizing the `allVMs`
+group for a subsequent play:
 
 ```yaml
 - hosts: localhost
@@ -109,6 +112,10 @@ Playbook with configuration options specified:
 #        name: rhel-server-6.9-update-9-x86_64-kvm.qcow2
         name: rhel-server-7.4-update-4-x86_64-kvm.qcow2
         location: /depot/images/libvirt/ # this must be local
+
+- hosts: allVMs
+  roles:
+    - role: do_something_to_the_VM_just_created
 ```
 
 Inclusion
